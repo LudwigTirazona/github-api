@@ -1,0 +1,45 @@
+#!/usr/bin/python3
+
+import sys
+import requests
+
+from requests import Timeout
+
+if len(sys.argv) < 3 :
+  print("Usage:\n\nprojects-getter <gitlab personal access token> <Gitlab group ID>...\n", file=sys.stderr)
+  sys.exit(1)
+
+personal_access_token = sys.argv[1]
+
+request_headers = {'PRIVATE-TOKEN': sys.argv[1] }
+
+gitlab_group_index = 2
+
+while gitlab_group_index < len(sys.argv) :
+
+  # Make initial connection
+  try:
+    r = requests.get('https://gitlab.com/api/v4/groups/' + sys.argv[gitlab_group_index] + '/projects', headers=request_headers, timeout=10)
+  except ConnectionError:
+    print("Connection error.\n", file=sys.stderr)
+    sys.exit(2)
+  except Timeout:
+    print("Connection timed out.\n", file=sys.stderr)
+    sys.exit(3)
+
+  if r.status_code == 401 :
+    print("Personal Access Token Unauthorized on group " + sys.argv[gitlab_group_index] + "\n", file=sys.stderr)
+    sys.exit(2)
+  #print(r.headers)
+  total_pages = r.headers['X-Total-Pages']
+  gitlab_return = r.json()
+  for x in range(0, len(gitlab_return)):
+    print(gitlab_return[x]['ssh_url_to_repo'])
+
+  for page in range(1, (int(total_pages) + 1)):
+    r = requests.get('https://gitlab.com/api/v4/groups/1350575/projects', params={'page': page })
+    gitlab_return = r.json()
+    for x in range(0, len(gitlab_return)):
+      print(gitlab_return[x]['ssh_url_to_repo'])
+
+  gitlab_group_index += 1
